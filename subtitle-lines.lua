@@ -7,6 +7,8 @@
 -- add bindings to input.conf:
 -- Ctrl+f script-binding subtitle_lines/list_subtitles
 
+-- print(mp.get_property("decoder-list"))
+
 local mp = require 'mp'
 local utils = require 'mp.utils'
 local script_name = mp.get_script_name()
@@ -36,6 +38,13 @@ function acquire_subtitles()
     subtitles = {}
     local path = mp.get_property("path")
     local sid = mp.get_property("sid") - 1
+    for index, track in ipairs(mp.get_property_native('track-list')) do
+        if track.type == "sub" and track.selected and track.external then
+            mp.msg.info("Reading external track: " .. track["external-filename"])
+            path = track["external-filename"]
+            sid = 0
+        end
+    end
 
     local cmd = "ffmpeg -i \"" .. path .. "\" -map s:"..sid .. " -f ass - 2> nul"
     local handle = io.popen(cmd, 'r')
@@ -108,5 +117,9 @@ mp.register_script_message('uosc-menu-closed', function()
 end)
 
 mp.register_event('end-file', function()
+    subtitles = nil
+end)
+
+mp.observe_property('sid', "native", function(_, value)
     subtitles = nil
 end)
